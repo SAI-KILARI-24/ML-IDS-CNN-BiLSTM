@@ -23,7 +23,7 @@ from dashboard.components import SOCDashboardComponents
 
 # Streamlit Page Setup
 st.set_page_config(
-    page_title="ML Intrusion Detection System",
+    page_title="ML-IDS Network Intrusion Detection",
     page_icon="🛡️",
     layout="wide"
 )
@@ -32,12 +32,12 @@ st.set_page_config(
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
 
-# Load PyTorch Model
+# Load Trained PyTorch Model
 @st.cache_resource
 def load_ids_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if not config.SAVED_MODEL_PATH.exists():
-        return None, None, "Model checkpoint missing."
+        return None, None, f"Model checkpoint missing at {config.SAVED_MODEL_PATH}"
     try:
         checkpoint = torch.load(config.SAVED_MODEL_PATH, map_location=device)
         classes = checkpoint.get("classes", config.CIC_IOT_CLASSES)
@@ -52,96 +52,131 @@ def load_ids_model():
         ).to(device)
         model.load_state_dict(checkpoint["model_state_dict"])
         model.eval()
-        return model, classes, "Model Online"
+        return model, classes, "PyTorch Model Loaded"
     except Exception as e:
-        return None, None, str(e)
+        return None, None, f"Model load error: {str(e)}"
 
 
 model, class_labels, model_status = load_ids_model()
 
-# Header Title Banner
+# Header Banner
 st.markdown(
     """
     <div style="background-color:#161b22; padding:1.2rem; border-radius:6px; border:1px solid #30363d; margin-bottom:1.5rem;">
-        <h2 style="margin:0; color:#f0f6fc; font-weight:700;">🛡️ ML-Powered Intrusion Detection System (IDS)</h2>
-        <p style="margin:4px 0 0 0; color:#8b949e; font-size:0.9rem;">
-            PyTorch 1D-CNN + BiLSTM Deep Learning Model & SHAP Explainable AI for Network Traffic Analysis
+        <h2 style="margin:0; color:#f0f6fc; font-weight:700;">🛡️ ML-IDS: Network Intrusion Detection</h2>
+        <p style="margin:4px 0 0 0; color:#8b949e; font-size:0.88rem;">
+            Real-Time Payload Inspection Engine | PyTorch 1D-CNN + BiLSTM & SHAP Explainable AI
         </p>
     </div>
     """,
     unsafe_allow_html=True
 )
 
+# Session State Initialization
+if "target_pcap_path" not in st.session_state:
+    st.session_state.target_pcap_path = None
+if "target_pcap_name" not in st.session_state:
+    st.session_state.target_pcap_name = None
+if "pcap_file_info" not in st.session_state:
+    st.session_state.pcap_file_info = None
+if "analysis_done" not in st.session_state:
+    st.session_state.analysis_done = False
+if "detection_results" not in st.session_state:
+    st.session_state.detection_results = []
+if "processing_time_ms" not in st.session_state:
+    st.session_state.processing_time_ms = 0.0
+
 
 # ==============================================================================
-# STEP 1: INPUT FIELD & FILE UPLOAD
+# SECTION A: PCAP UPLOAD
 # ==============================================================================
-st.markdown("### 📥 STEP 1: Upload Network Traffic File (.pcap / .pcapng)")
+st.markdown("### 1. Upload PCAP File")
 
-col_input1, col_input2 = st.columns([3, 1])
+col_up1, col_up2 = st.columns([3, 1])
 
-with col_input1:
+with col_up1:
     uploaded_file = st.file_uploader(
-        "Select or Drag & Drop PCAP File",
+        "Choose .pcap or .pcapng file",
         type=["pcap", "pcapng", "cap"],
         help="Upload raw network packet capture files for payload analysis"
     )
 
-with col_input2:
+with col_up2:
     st.write(" ")
     st.write(" ")
     use_sample = st.checkbox("Use Sample PCAP File", value=False)
     if st.button("Generate Sample PCAP"):
         sample_path = generate_sample_pcap()
-        st.success("Sample PCAP Generated!")
+        st.success("Sample PCAP Created!")
 
-target_pcap_path = None
-
+# Handle file selection
 if uploaded_file is not None:
     save_path = config.SAMPLE_PCAP_DIR / uploaded_file.name
     with open(save_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
-    target_pcap_path = str(save_path)
+    st.session_state.target_pcap_path = str(save_path)
+    st.session_state.target_pcap_name = uploaded_file.name
 elif use_sample:
-    target_pcap_path = str(config.SAMPLE_PCAP_DIR / "sample_traffic.pcap")
-    if not Path(target_pcap_path).exists():
-        generate_sample_pcap(target_pcap_path)
+    sample_path = str(config.SAMPLE_PCAP_DIR / "sample_traffic.pcap")
+    if not Path(sample_path).exists():
+        generate_sample_pcap(sample_path)
+    st.session_state.target_pcap_path = sample_path
+    st.session_state.target_pcap_name = "sample_traffic.pcap"
 
 
 # ==============================================================================
-# STEP 2: CHECK FILE BUTTON
+# SECTION B & C: FILE INFORMATION & CHECK & ANALYZE FILE BUTTON
+# (Shown only after a file is uploaded/selected)
 # ==============================================================================
-st.markdown("---")
-st.markdown("### 🔍 STEP 2: Run Traffic Analysis")
+if st.session_state.target_pcap_path and Path(st.session_state.target_pcap_path).exists():
+    pcap_processor = PCAPProcessor()
+    
+    # Pre-validate file metadata
+    if st.session_state.pcap_file_info is None or st.session_state.pcap_file_info.get("file_name") != st.session_state.target_pcap_name:
+        val_res = pcap_processor.process_pcap(st.session_state.target_pcap_path, max_packets=500)
+        if val_res["success"]:
+            st.session_state.pcap_file_info = val_res["file_info"]
+            st.session_state.pre_extracted_packets = val_res["packets"]
 
-btn_analyze = st.button("🚀 CHECK FILE & DETECT ATTACKS", type="primary", use_container_width=True)
+    file_info = st.session_state.pcap_file_info
 
+    st.markdown("---")
+    st.markdown("### 2. File Information")
+    st.markdown(
+        f"""
+        <div class="soc-panel">
+            <div style="font-size:0.95rem; color:#f0f6fc;">
+                <b>Selected File:</b> <code>{st.session_state.target_pcap_name}</code> &nbsp;|&nbsp; 
+                <b>File Size:</b> {file_info['file_size_mb']} MB &nbsp;|&nbsp; 
+                <b>Packets Found:</b> {file_info['total_packets']} &nbsp;|&nbsp;
+                <b>Payload Packets:</b> {file_info['packets_with_payload']}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-# ==============================================================================
-# STEP 3: OUTPUT RESULTS
-# ==============================================================================
-if btn_analyze:
-    if not target_pcap_path or not Path(target_pcap_path).exists():
-        st.error("Please upload a valid PCAP file or select 'Use Sample PCAP File' before checking.")
-    elif model is None:
-        st.error(f"Cannot run detection: PyTorch model unavailable. ({model_status})")
-    else:
-        with st.spinner("Extracting Scapy packet payloads & running PyTorch 1D-CNN + BiLSTM inference..."):
-            processor = PCAPProcessor()
-            res = processor.process_pcap(target_pcap_path)
+    st.markdown("### 3. Analyze Traffic")
+    btn_analyze = st.button("🔍 CHECK & ANALYZE FILE", type="primary", use_container_width=True)
 
-            if not res["success"]:
-                st.error(f"PCAP Processing Failed: {res['message']}")
-            else:
-                st.session_state["last_analysis"] = res
-                st.session_state["analyzed_file_name"] = Path(target_pcap_path).name
+    # Trigger Analysis Pass
+    if btn_analyze:
+        if model is None:
+            st.error(f"Cannot perform detection: {model_status}")
+        else:
+            with st.spinner("Analyzing PCAP..."):
+                start_time = time.time()
+                
+                packets = st.session_state.get("pre_extracted_packets", [])
+                if not packets:
+                    res = pcap_processor.process_pcap(st.session_state.target_pcap_path)
+                    packets = res["packets"]
 
-                # Process Payloads & Predict
                 payload_proc = PayloadProcessor(target_len=config.PAYLOAD_SIZE)
                 detections = []
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-                for pkt in res["packets"]:
+                for pkt in packets:
                     raw_payload = pkt["payload_bytes"]
                     norm_payload = payload_proc.preprocess_payload(raw_payload)
 
@@ -152,7 +187,7 @@ if btn_analyze:
                         pred_idx = int(np.argmax(probs))
                         pred_label = class_labels[pred_idx] if class_labels else f"Class_{pred_idx}"
 
-                    # Ground truth heuristic tag matching
+                    # Ground truth heuristic verification if available
                     gt = "N/A"
                     payload_str = str(raw_payload)
                     for c in config.CIC_IOT_CLASSES:
@@ -175,86 +210,160 @@ if btn_analyze:
                         "norm_payload": norm_payload
                     })
 
-                st.session_state["detections"] = detections
+                elapsed_ms = (time.time() - start_time) * 1000.0
+                st.session_state.detection_results = detections
+                st.session_state.processing_time_ms = round(elapsed_ms, 2)
+                st.session_state.analysis_done = True
 
 
-# Display Output Results if analysis exists
-if "detections" in st.session_state and st.session_state["detections"]:
-    detections = st.session_state["detections"]
-    file_info = st.session_state["last_analysis"]["file_info"]
+# ==============================================================================
+# SECTIONS D - J: ANALYSIS RESULTS (Shown ONLY after "CHECK & ANALYZE FILE" button clicked)
+# ==============================================================================
+if st.session_state.analysis_done and st.session_state.detection_results:
+    detections = st.session_state.detection_results
+    total_flows = len(detections)
+    attack_flows = sum(1 for d in detections if "Benign" not in d["pred_label"])
+    benign_flows = total_flows - attack_flows
+    avg_confidence = float(np.mean([d["confidence"] for d in detections]))
+
+    # Determine Primary Attack Vector
+    attack_counts = {}
+    for d in detections:
+        if "Benign" not in d["pred_label"]:
+            lbl = d["pred_label"]
+            attack_counts[lbl] = attack_counts.get(lbl, 0) + 1
+
+    primary_attack = max(attack_counts, key=attack_counts.get) if attack_counts else "None"
+    is_attack_detected = attack_flows > 0
 
     st.markdown("---")
-    st.markdown("## 📊 ANALYSIS OUTPUT & DETECTION RESULTS")
+    
+    # --------------------------------------------------------------------------
+    # SECTION D: ANALYSIS RESULT BANNER
+    # --------------------------------------------------------------------------
+    st.markdown("### 4. Analysis Result")
+    
+    if is_attack_detected:
+        st.markdown(
+            f"""
+            <div style="background-color:rgba(248,81,73,0.12); border:1px solid #f85149; padding:1.2rem; border-radius:6px; margin-bottom:1rem;">
+                <h3 style="color:#f85149; margin:0 0 0.5rem 0; font-weight:700;">Status: ATTACK DETECTED</h3>
+                <div style="font-size:1.05rem; color:#f0f6fc;">
+                    <b>Primary Attack Prediction:</b> <span class="badge-attack">{primary_attack}</span> &nbsp;|&nbsp; 
+                    <b>Average Confidence:</b> <code>{avg_confidence * 100:.1f}%</code> &nbsp;|&nbsp; 
+                    <b>Malicious Flows Detected:</b> <code>{attack_flows} / {total_flows}</code>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <div style="background-color:rgba(63,185,80,0.12); border:1px solid #3fb950; padding:1.2rem; border-radius:6px; margin-bottom:1rem;">
+                <h3 style="color:#3fb950; margin:0 0 0.5rem 0; font-weight:700;">Status: BENIGN TRAFFIC</h3>
+                <div style="font-size:1.05rem; color:#f0f6fc;">
+                    No malicious attack vectors detected in the analyzed packet capture.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # 1. File Metadata Summary
-    st.success(f"Successfully Analyzed File: `{file_info['file_name']}` ({file_info['file_size_mb']} MB)")
+    # --------------------------------------------------------------------------
+    # SECTION E: DETECTION SUMMARY
+    # --------------------------------------------------------------------------
+    st.markdown("### 5. Detection Summary")
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Flows / Packets Analyzed", f"{total_flows:,}")
+    s2.metric("Attack Flows", f"{attack_flows:,}", delta=f"{attack_flows} Malicious" if attack_flows > 0 else "0 Threat", delta_color="inverse")
+    s3.metric("Benign Flows", f"{benign_flows:,}")
+    s4.metric("Processing Latency", f"{st.session_state.processing_time_ms} ms")
 
-    total_pkts = len(detections)
-    attacks = sum(1 for d in detections if "Benign" not in d["pred_label"])
-    benign = total_pkts - attacks
-    avg_conf = float(np.mean([d["confidence"] for d in detections]))
-
-    # 2. Executive KPI Panels
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Packets Analyzed", total_pkts)
-    c2.metric("Attacks Detected", attacks, delta=f"{attacks} Malicious" if attacks > 0 else "0 Threat", delta_color="inverse")
-    c3.metric("Benign Traffic", benign)
-    c4.metric("Avg Confidence", f"{avg_conf * 100:.1f}%")
-
-    # 3. Packet Detection Table
-    st.markdown("### 📋 Packet-by-Packet Detection Feed")
+    # --------------------------------------------------------------------------
+    # SECTION F: DETECTION DETAILS TABLE
+    # --------------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("### 6. Detection Details Table")
     SOCDashboardComponents.render_detection_table(detections)
 
-    # 4. Attack Analytics & Class Distribution
+    # --------------------------------------------------------------------------
+    # SECTION G: ATTACK ANALYSIS
+    # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 📈 Attack Distribution Analysis")
-    col_chart, col_tbl = st.columns(2)
-
-    counts = {}
+    st.markdown("### 7. Attack Analysis")
+    cat_counts = {}
     for d in detections:
         lbl = d["pred_label"]
-        counts[lbl] = counts.get(lbl, 0) + 1
+        cat_counts[lbl] = cat_counts.get(lbl, 0) + 1
 
-    df_counts = pd.DataFrame(list(counts.items()), columns=["Threat Category", "Packet Count"])
+    df_cat = pd.DataFrame(list(cat_counts.items()), columns=["Classification", "Count"])
 
-    with col_chart:
-        st.bar_chart(df_counts.set_index("Threat Category"))
+    c_chart, c_tbl = st.columns(2)
+    with c_chart:
+        st.bar_chart(df_cat.set_index("Classification"))
+    with c_tbl:
+        st.dataframe(df_cat, use_container_width=True, hide_index=True)
 
-    with col_tbl:
-        st.dataframe(df_counts, use_container_width=True, hide_index=True)
-
-    # 5. Model Evaluation Metrics
+    # --------------------------------------------------------------------------
+    # SECTION H: MODEL INFORMATION & EVALUATION METRICS
+    # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 🏆 Actual PyTorch Model Evaluation Metrics")
-    if config.METRICS_REPORT_PATH.exists():
-        with open(config.METRICS_REPORT_PATH, "r") as f:
-            metrics_report = json.load(f)
+    st.markdown("### 8. Model Information & Evaluation Metrics")
+    m_col1, m_col2 = st.columns(2)
 
-        multi = metrics_report["multiclass"]
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Multiclass Accuracy", f"{multi['accuracy'] * 100:.2f}%")
-        m2.metric("Precision (Macro)", f"{multi['precision_macro']:.4f}")
-        m3.metric("Recall (Macro)", f"{multi['recall_macro']:.4f}")
-        m4.metric("F1-Score (Macro)", f"{multi['f1_macro']:.4f}")
+    with m_col1:
+        st.markdown("<div class='soc-panel'>", unsafe_allow_html=True)
+        st.markdown("<div class='soc-panel-title'>PyTorch Architecture Details</div>", unsafe_allow_html=True)
+        st.write(f"**Framework:** PyTorch {torch.__version__}")
+        st.write(f"**Model Type:** 1D-CNN + Bidirectional LSTM (BiLSTM)")
+        st.write(f"**Input Format:** 1,024 Normalized Byte Sequence `(1, 1024)`")
+        st.write(f"**Target Classes ({len(config.CIC_IOT_CLASSES)}):** CICIoT2023 Dataset Schema")
+        st.write(f"**Saved Weights:** `{config.SAVED_MODEL_PATH.name}`")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        SOCDashboardComponents.render_confusion_matrix_plot(multi["confusion_matrix"], multi["classes"])
+    with m_col2:
+        if config.METRICS_REPORT_PATH.exists():
+            with open(config.METRICS_REPORT_PATH, "r") as f:
+                metrics_rep = json.load(f)
+            multi = metrics_rep["multiclass"]
+            st.markdown("<div class='soc-panel'>", unsafe_allow_html=True)
+            st.markdown("<div class='soc-panel-title'>Test Dataset Evaluation Metrics</div>", unsafe_allow_html=True)
+            st.write(f"**Multiclass Accuracy:** `{multi['accuracy'] * 100:.2f}%`")
+            st.write(f"**Precision (Macro):** `{multi['precision_macro']:.4f}`")
+            st.write(f"**Recall (Macro):** `{multi['recall_macro']:.4f}`")
+            st.write(f"**F1-Score (Macro):** `{multi['f1_macro']:.4f}`")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    # 6. SHAP Byte Explainability
+    # --------------------------------------------------------------------------
+    # SECTION I: EXPLAINABILITY (SHAP)
+    # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 🧠 SHAP Explainable AI (XAI) Byte Inspection")
-    pkt_options = [f"Pkt #{d['packet_id']} - {d['pred_label']} ({d['confidence']*100:.1f}%)" for d in detections]
-    selected_pkt_idx = st.selectbox("Select Analyzed Packet to Explain:", range(len(pkt_options)), format_func=lambda i: pkt_options[i])
+    st.markdown("### 9. Explainability (SHAP Byte Importance)")
+    pkt_opts = [f"Flow #{d['packet_id']} - {d['pred_label']} ({d['confidence']*100:.1f}%)" for d in detections]
+    sel_idx = st.selectbox("Select Flow / Packet to Explain:", range(len(pkt_opts)), format_func=lambda i: pkt_opts[i])
 
-    target_pkt = detections[selected_pkt_idx]
+    sel_pkt = detections[sel_idx]
 
-    if st.button("⚡ Compute SHAP Explanation for Selected Packet"):
-        with st.spinner("Computing SHAP byte importance scores..."):
+    if st.button("⚡ Compute SHAP Explanation"):
+        with st.spinner("Calculating SHAP feature importance for 1024 payload bytes..."):
             bg_data = np.zeros((20, config.PAYLOAD_SIZE), dtype=np.float32)
             explainer = PyTorchIDSShapExplainer(model, background_data=bg_data)
-            shap_res = explainer.explain_payload(target_pkt["norm_payload"], top_k=8)
+            shap_res = explainer.explain_payload(sel_pkt["norm_payload"], top_k=8)
 
-            st.write(f"**Selected Packet:** `{target_pkt['packet_id']}` | **Predicted Threat:** `{target_pkt['pred_label']}` | **Confidence:** `{target_pkt['confidence']*100:.2f}%`")
+            st.write(f"**Flow #{sel_pkt['packet_id']}** | **Predicted Class:** `{sel_pkt['pred_label']}` | **Confidence:** `{sel_pkt['confidence']*100:.2f}%`")
             SOCDashboardComponents.render_shap_heatmap(shap_res["byte_shap_scores"], shap_res["top_contributing_bytes"])
 
-else:
-    st.info("💡 Instructions: Upload a PCAP file above (or check 'Use Sample PCAP File') and click '🚀 CHECK FILE & DETECT ATTACKS' to view analysis output.")
+    # --------------------------------------------------------------------------
+    # SECTION J: CLEAR / NEW ANALYSIS BUTTON
+    # --------------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("### 10. Actions")
+    if st.button("🔄 Clear / Start New Analysis", use_container_width=True):
+        st.session_state.target_pcap_path = None
+        st.session_state.target_pcap_name = None
+        st.session_state.pcap_file_info = None
+        st.session_state.analysis_done = False
+        st.session_state.detection_results = []
+        st.session_state.processing_time_ms = 0.0
+        st.rerun()
