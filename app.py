@@ -28,7 +28,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Apply Custom Dark Theme CSS
+# Apply Custom Colorful Theme CSS
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
 
@@ -59,14 +59,14 @@ def load_ids_model():
 
 model, class_labels, model_status = load_ids_model()
 
-# Header Banner
+# Colorful Header Banner
 st.markdown(
     """
-    <div style="background-color:#161b22; padding:1.2rem; border-radius:6px; border:1px solid #30363d; margin-bottom:1.5rem;">
-        <h2 style="margin:0; color:#f0f6fc; font-weight:700;">🛡️ ML-IDS: Network Intrusion Detection</h2>
-        <p style="margin:4px 0 0 0; color:#8b949e; font-size:0.88rem;">
-            Real-Time Payload Inspection Engine | PyTorch 1D-CNN + BiLSTM & SHAP Explainable AI
-        </p>
+    <div class="soc-header-banner">
+        <div class="soc-title">🛡️ ML-IDS: Network Intrusion Detection Console</div>
+        <div class="soc-subtitle">
+            ⚡ PyTorch 1D-CNN + BiLSTM Deep Learning Model | Scapy Payload Processing | SHAP Explainable AI
+        </div>
     </div>
     """,
     unsafe_allow_html=True
@@ -90,13 +90,13 @@ if "processing_time_ms" not in st.session_state:
 # ==============================================================================
 # SECTION A: PCAP UPLOAD
 # ==============================================================================
-st.markdown("### 1. Upload PCAP File")
+st.markdown("### 📥 1. Upload PCAP File")
 
 col_up1, col_up2 = st.columns([3, 1])
 
 with col_up1:
     uploaded_file = st.file_uploader(
-        "Choose .pcap or .pcapng file",
+        "Select or Drag & Drop PCAP File (.pcap / .pcapng)",
         type=["pcap", "pcapng", "cap"],
         help="Upload raw network packet capture files for payload analysis"
     )
@@ -141,23 +141,23 @@ if st.session_state.target_pcap_path and Path(st.session_state.target_pcap_path)
     file_info = st.session_state.pcap_file_info
 
     st.markdown("---")
-    st.markdown("### 2. File Information")
+    st.markdown("### 📄 2. File Information")
     st.markdown(
         f"""
-        <div class="soc-panel">
-            <div style="font-size:0.95rem; color:#f0f6fc;">
-                <b>Selected File:</b> <code>{st.session_state.target_pcap_name}</code> &nbsp;|&nbsp; 
-                <b>File Size:</b> {file_info['file_size_mb']} MB &nbsp;|&nbsp; 
-                <b>Packets Found:</b> {file_info['total_packets']} &nbsp;|&nbsp;
-                <b>Payload Packets:</b> {file_info['packets_with_payload']}
+        <div class="soc-card" style="border-left: 4px solid #6366f1;">
+            <div style="font-size:1rem; color:#f8fafc;">
+                📂 <b>Selected File:</b> <span class="badge-info">{st.session_state.target_pcap_name}</span> &nbsp;|&nbsp; 
+                💾 <b>File Size:</b> <b style="color:#60a5fa;">{file_info['file_size_mb']} MB</b> &nbsp;|&nbsp; 
+                📦 <b>Packets Found:</b> <b style="color:#a78bfa;">{file_info['total_packets']}</b> &nbsp;|&nbsp;
+                ⚡ <b>Payload Packets:</b> <b style="color:#f472b6;">{file_info['packets_with_payload']}</b>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown("### 3. Analyze Traffic")
-    btn_analyze = st.button("🔍 CHECK & ANALYZE FILE", type="primary", use_container_width=True)
+    st.markdown("### 🔍 3. Analyze Traffic")
+    btn_analyze = st.button("🚀 CHECK & ANALYZE FILE", type="primary", use_container_width=True)
 
     # Trigger Analysis Pass
     if btn_analyze:
@@ -241,17 +241,19 @@ if st.session_state.analysis_done and st.session_state.detection_results:
     # --------------------------------------------------------------------------
     # SECTION D: ANALYSIS RESULT BANNER
     # --------------------------------------------------------------------------
-    st.markdown("### 4. Analysis Result")
+    st.markdown("### 🚨 4. Analysis Result")
     
     if is_attack_detected:
         st.markdown(
             f"""
-            <div style="background-color:rgba(248,81,73,0.12); border:1px solid #f85149; padding:1.2rem; border-radius:6px; margin-bottom:1rem;">
-                <h3 style="color:#f85149; margin:0 0 0.5rem 0; font-weight:700;">Status: ATTACK DETECTED</h3>
-                <div style="font-size:1.05rem; color:#f0f6fc;">
-                    <b>Primary Attack Prediction:</b> <span class="badge-attack">{primary_attack}</span> &nbsp;|&nbsp; 
-                    <b>Average Confidence:</b> <code>{avg_confidence * 100:.1f}%</code> &nbsp;|&nbsp; 
-                    <b>Malicious Flows Detected:</b> <code>{attack_flows} / {total_flows}</code>
+            <div class="banner-attack">
+                <h2 style="color:#ffffff; margin:0 0 0.6rem 0; font-weight:800; display:flex; align-items:center;">
+                    ⚠️ Status: ATTACK DETECTED
+                </h2>
+                <div style="font-size:1.1rem; color:#fecdd3; line-height:1.6;">
+                    <b>Primary Attack Vector:</b> <span class="badge-attack" style="font-size:1rem;">{primary_attack}</span> &nbsp;|&nbsp; 
+                    <b>Avg Model Confidence:</b> <code>{avg_confidence * 100:.1f}%</code> &nbsp;|&nbsp; 
+                    <b>Malicious Flows:</b> <code>{attack_flows} / {total_flows}</code>
                 </div>
             </div>
             """,
@@ -260,10 +262,12 @@ if st.session_state.analysis_done and st.session_state.detection_results:
     else:
         st.markdown(
             """
-            <div style="background-color:rgba(63,185,80,0.12); border:1px solid #3fb950; padding:1.2rem; border-radius:6px; margin-bottom:1rem;">
-                <h3 style="color:#3fb950; margin:0 0 0.5rem 0; font-weight:700;">Status: BENIGN TRAFFIC</h3>
-                <div style="font-size:1.05rem; color:#f0f6fc;">
-                    No malicious attack vectors detected in the analyzed packet capture.
+            <div class="banner-benign">
+                <h2 style="color:#ffffff; margin:0 0 0.6rem 0; font-weight:800;">
+                    ✅ Status: BENIGN TRAFFIC
+                </h2>
+                <div style="font-size:1.1rem; color:#a7f3d0;">
+                    No malicious attack vectors detected. All analyzed packets match normal operational network traffic.
                 </div>
             </div>
             """,
@@ -271,27 +275,72 @@ if st.session_state.analysis_done and st.session_state.detection_results:
         )
 
     # --------------------------------------------------------------------------
-    # SECTION E: DETECTION SUMMARY
+    # SECTION E: DETECTION SUMMARY (Vibrant KPI Cards)
     # --------------------------------------------------------------------------
-    st.markdown("### 5. Detection Summary")
+    st.markdown("### 📊 5. Detection Summary")
     s1, s2, s3, s4 = st.columns(4)
-    s1.metric("Flows / Packets Analyzed", f"{total_flows:,}")
-    s2.metric("Attack Flows", f"{attack_flows:,}", delta=f"{attack_flows} Malicious" if attack_flows > 0 else "0 Threat", delta_color="inverse")
-    s3.metric("Benign Flows", f"{benign_flows:,}")
-    s4.metric("Processing Latency", f"{st.session_state.processing_time_ms} ms")
+
+    with s1:
+        st.markdown(
+            f"""
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-title">Flows Analyzed</div>
+                <div class="kpi-value">{total_flows:,}</div>
+                <div class="kpi-sub">Total Packet Sequences</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with s2:
+        card_class = "kpi-red" if attack_flows > 0 else "kpi-green"
+        st.markdown(
+            f"""
+            <div class="kpi-card {card_class}">
+                <div class="kpi-title">Attack Flows</div>
+                <div class="kpi-value">{attack_flows:,}</div>
+                <div class="kpi-sub">{attack_flows} Threats Detected</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with s3:
+        st.markdown(
+            f"""
+            <div class="kpi-card kpi-green">
+                <div class="kpi-title">Benign Flows</div>
+                <div class="kpi-value">{benign_flows:,}</div>
+                <div class="kpi-sub">Normal Traffic</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with s4:
+        st.markdown(
+            f"""
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-title">Processing Latency</div>
+                <div class="kpi-value">{st.session_state.processing_time_ms} ms</div>
+                <div class="kpi-sub">PyTorch Inference Time</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # --------------------------------------------------------------------------
     # SECTION F: DETECTION DETAILS TABLE
     # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 6. Detection Details Table")
+    st.markdown("### 📋 6. Detection Details Table")
     SOCDashboardComponents.render_detection_table(detections)
 
     # --------------------------------------------------------------------------
     # SECTION G: ATTACK ANALYSIS
     # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 7. Attack Analysis")
+    st.markdown("### 📈 7. Attack Analysis")
     cat_counts = {}
     for d in detections:
         lbl = d["pred_label"]
@@ -309,37 +358,47 @@ if st.session_state.analysis_done and st.session_state.detection_results:
     # SECTION H: MODEL INFORMATION & EVALUATION METRICS
     # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 8. Model Information & Evaluation Metrics")
+    st.markdown("### ⚙️ 8. Model Information & Evaluation Metrics")
     m_col1, m_col2 = st.columns(2)
 
     with m_col1:
-        st.markdown("<div class='soc-panel'>", unsafe_allow_html=True)
-        st.markdown("<div class='soc-panel-title'>PyTorch Architecture Details</div>", unsafe_allow_html=True)
-        st.write(f"**Framework:** PyTorch {torch.__version__}")
-        st.write(f"**Model Type:** 1D-CNN + Bidirectional LSTM (BiLSTM)")
-        st.write(f"**Input Format:** 1,024 Normalized Byte Sequence `(1, 1024)`")
-        st.write(f"**Target Classes ({len(config.CIC_IOT_CLASSES)}):** CICIoT2023 Dataset Schema")
-        st.write(f"**Saved Weights:** `{config.SAVED_MODEL_PATH.name}`")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="soc-card" style="border-left: 4px solid #8b5cf6;">
+                <h4 style="color:#c084fc; margin-top:0;">🧠 PyTorch Architecture Details</h4>
+                <p style="margin:4px 0;"><b>Framework:</b> PyTorch <code>{torch.__version__}</code></p>
+                <p style="margin:4px 0;"><b>Model Type:</b> 1D-CNN + Bidirectional LSTM (BiLSTM)</p>
+                <p style="margin:4px 0;"><b>Input Format:</b> 1,024 Normalized Byte Sequence <code>(1, 1024)</code></p>
+                <p style="margin:4px 0;"><b>Target Classes ({len(config.CIC_IOT_CLASSES)}):</b> CICIoT2023 Dataset Schema</p>
+                <p style="margin:4px 0;"><b>Saved Weights:</b> <code>{config.SAVED_MODEL_PATH.name}</code></p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with m_col2:
         if config.METRICS_REPORT_PATH.exists():
             with open(config.METRICS_REPORT_PATH, "r") as f:
                 metrics_rep = json.load(f)
             multi = metrics_rep["multiclass"]
-            st.markdown("<div class='soc-panel'>", unsafe_allow_html=True)
-            st.markdown("<div class='soc-panel-title'>Test Dataset Evaluation Metrics</div>", unsafe_allow_html=True)
-            st.write(f"**Multiclass Accuracy:** `{multi['accuracy'] * 100:.2f}%`")
-            st.write(f"**Precision (Macro):** `{multi['precision_macro']:.4f}`")
-            st.write(f"**Recall (Macro):** `{multi['recall_macro']:.4f}`")
-            st.write(f"**F1-Score (Macro):** `{multi['f1_macro']:.4f}`")
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="soc-card" style="border-left: 4px solid #38bdf8;">
+                    <h4 style="color:#38bdf8; margin-top:0;">🏆 Test Dataset Evaluation Metrics</h4>
+                    <p style="margin:4px 0;"><b>Multiclass Accuracy:</b> <b style="color:#4ade80;">{multi['accuracy'] * 100:.2f}%</b></p>
+                    <p style="margin:4px 0;"><b>Precision (Macro):</b> <code>{multi['precision_macro']:.4f}</code></p>
+                    <p style="margin:4px 0;"><b>Recall (Macro):</b> <code>{multi['recall_macro']:.4f}</code></p>
+                    <p style="margin:4px 0;"><b>F1-Score (Macro):</b> <b style="color:#60a5fa;">{multi['f1_macro']:.4f}</b></p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
     # --------------------------------------------------------------------------
     # SECTION I: EXPLAINABILITY (SHAP)
     # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 9. Explainability (SHAP Byte Importance)")
+    st.markdown("### 🧠 9. Explainability (SHAP Byte Importance)")
     pkt_opts = [f"Flow #{d['packet_id']} - {d['pred_label']} ({d['confidence']*100:.1f}%)" for d in detections]
     sel_idx = st.selectbox("Select Flow / Packet to Explain:", range(len(pkt_opts)), format_func=lambda i: pkt_opts[i])
 
@@ -358,7 +417,7 @@ if st.session_state.analysis_done and st.session_state.detection_results:
     # SECTION J: CLEAR / NEW ANALYSIS BUTTON
     # --------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### 10. Actions")
+    st.markdown("### 🔄 10. Actions")
     if st.button("🔄 Clear / Start New Analysis", use_container_width=True):
         st.session_state.target_pcap_path = None
         st.session_state.target_pcap_name = None
