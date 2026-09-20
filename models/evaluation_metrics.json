@@ -1,0 +1,173 @@
+{
+    "multiclass": {
+        "accuracy": 1.0,
+        "precision_macro": 1.0,
+        "recall_macro": 1.0,
+        "f1_macro": 1.0,
+        "precision_weighted": 1.0,
+        "recall_weighted": 1.0,
+        "f1_weighted": 1.0,
+        "confusion_matrix": [
+            [
+                75,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                75,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                75,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                75,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                0,
+                75,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                75,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                75,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                75
+            ]
+        ],
+        "classes": [
+            "BenignTraffic",
+            "DDoS-ICMP_Flood",
+            "DDoS-SYN_Flood",
+            "DDoS-UDP_Flood",
+            "Mirai-greeth_flood",
+            "Recon-PortScan",
+            "Spoofing-ARP",
+            "Vulnerability-Scan"
+        ],
+        "per_class": {
+            "BenignTraffic": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "DDoS-ICMP_Flood": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "DDoS-SYN_Flood": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "DDoS-UDP_Flood": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "Mirai-greeth_flood": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "Recon-PortScan": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "Spoofing-ARP": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            },
+            "Vulnerability-Scan": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 75
+            }
+        }
+    },
+    "binary": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "confusion_matrix": [
+            [
+                75,
+                0
+            ],
+            [
+                0,
+                525
+            ]
+        ],
+        "tn": 75,
+        "fp": 0,
+        "fn": 0,
+        "tp": 525
+    }
+}
